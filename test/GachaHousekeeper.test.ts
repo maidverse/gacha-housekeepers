@@ -4,15 +4,19 @@ import { BigNumber, constants } from "ethers";
 import { defaultAbiCoder, hexlify, keccak256, toUtf8Bytes } from "ethers/lib/utils";
 import { waffle } from "hardhat";
 import GachaHousekeeperArtifact from "../artifacts/contracts/GachaHousekeeper.sol/GachaHousekeeper.json";
+import MaidCoinArtifact from "../artifacts/contracts/MaidCoin.sol/MaidCoin.json";
 import TestLPTokenArtifact from "../artifacts/contracts/test/TestLPToken.sol/TestLPToken.json";
-import { GachaHousekeeper, TestLPToken } from "../typechain";
+import TestRNGArtifact from "../artifacts/contracts/test/TestRNG.sol/TestRNG.json";
+import { GachaHousekeeper, MaidCoin, TestLPToken, TestRNG } from "../typechain";
 import { expandTo18Decimals } from "./shared/utils/number";
-import { getERC721ApprovalDigest } from "./shared/utils/standard";
+import { getERC20ApprovalDigest, getERC721ApprovalDigest } from "./shared/utils/standard";
 
 const { deployContract } = waffle;
 
 describe("GachaHousekeeper", () => {
+    let maidCoin: MaidCoin;
     let testLPToken: TestLPToken;
+    let rng: TestRNG;
     let gachaHousekeeper: GachaHousekeeper;
 
     const provider = waffle.provider;
@@ -20,16 +24,28 @@ describe("GachaHousekeeper", () => {
 
     beforeEach(async () => {
 
+        maidCoin = await deployContract(
+            admin,
+            MaidCoinArtifact,
+            []
+        ) as MaidCoin;
+
         testLPToken = await deployContract(
             admin,
             TestLPTokenArtifact,
             []
         ) as TestLPToken;
 
+        rng = await deployContract(
+            admin,
+            TestRNGArtifact,
+            []
+        ) as TestRNG;
+
         gachaHousekeeper = await deployContract(
             admin,
             GachaHousekeeperArtifact,
-            [testLPToken.address]
+            [maidCoin.address, testLPToken.address, rng.address]
         ) as GachaHousekeeper;
     })
 
@@ -67,15 +83,38 @@ describe("GachaHousekeeper", () => {
             expect(await gachaHousekeeper.lpTokenToHousekeeperPower()).to.eq(BigNumber.from(2))
         })
 
-        it("mint, powerOf", async () => {
+        it("mint", async () => {
 
             const id = BigNumber.from(0);
-            const power = BigNumber.from(12);
 
-            await expect(gachaHousekeeper.mint(power))
+            await maidCoin.approve(gachaHousekeeper.address, expandTo18Decimals(1));
+            await expect(gachaHousekeeper.mint())
                 .to.emit(gachaHousekeeper, "Transfer")
                 .withArgs(constants.AddressZero, admin.address, id)
-            expect(await gachaHousekeeper.powerOf(id)).to.eq(power)
+            console.log((await gachaHousekeeper.powerOf(id)).toString());
+            expect(await gachaHousekeeper.totalSupply()).to.eq(BigNumber.from(1))
+            expect(await gachaHousekeeper.tokenURI(id)).to.eq(`https://api.maidcoin.org/gachahousekeeper/${id}`)
+        })
+
+        it("mint with permit", async () => {
+
+            const id = BigNumber.from(0);
+
+            const nonce = await maidCoin.nonces(admin.address)
+            const deadline = constants.MaxUint256
+            const digest = await getERC20ApprovalDigest(
+                maidCoin,
+                { owner: admin.address, spender: gachaHousekeeper.address, value: expandTo18Decimals(1) },
+                nonce,
+                deadline
+            )
+
+            const { v, r, s } = ecsign(Buffer.from(digest.slice(2), "hex"), Buffer.from(admin.privateKey.slice(2), "hex"))
+
+            await expect(gachaHousekeeper.mintWithPermit(deadline, v, r, s))
+                .to.emit(gachaHousekeeper, "Transfer")
+                .withArgs(constants.AddressZero, admin.address, id)
+            console.log((await gachaHousekeeper.powerOf(id)).toString());
             expect(await gachaHousekeeper.totalSupply()).to.eq(BigNumber.from(1))
             expect(await gachaHousekeeper.tokenURI(id)).to.eq(`https://api.maidcoin.org/gachahousekeeper/${id}`)
         })
@@ -83,48 +122,48 @@ describe("GachaHousekeeper", () => {
         it("support, powerOf", async () => {
 
             const id = BigNumber.from(0);
-            const power = BigNumber.from(12);
             const token = BigNumber.from(100);
 
             await testLPToken.mint(admin.address, token);
             await testLPToken.approve(gachaHousekeeper.address, token);
 
-            await expect(gachaHousekeeper.mint(power))
+            await maidCoin.approve(gachaHousekeeper.address, expandTo18Decimals(1));
+            await expect(gachaHousekeeper.mint())
                 .to.emit(gachaHousekeeper, "Transfer")
                 .withArgs(constants.AddressZero, admin.address, id)
+            console.log((await gachaHousekeeper.powerOf(id)).toString());
             await expect(gachaHousekeeper.support(id, token))
                 .to.emit(gachaHousekeeper, "Support")
                 .withArgs(id, token)
-            expect(await gachaHousekeeper.powerOf(id)).to.eq(power.add(token.mul(await gachaHousekeeper.lpTokenToHousekeeperPower()).div(expandTo18Decimals(1))))
         })
 
         it("desupport, powerOf", async () => {
 
             const id = BigNumber.from(0);
-            const power = BigNumber.from(12);
             const token = BigNumber.from(100);
 
             await testLPToken.mint(admin.address, token);
             await testLPToken.approve(gachaHousekeeper.address, token);
 
-            await expect(gachaHousekeeper.mint(power))
+            await maidCoin.approve(gachaHousekeeper.address, expandTo18Decimals(1));
+            await expect(gachaHousekeeper.mint())
                 .to.emit(gachaHousekeeper, "Transfer")
                 .withArgs(constants.AddressZero, admin.address, id)
+            console.log((await gachaHousekeeper.powerOf(id)).toString());
             await expect(gachaHousekeeper.support(id, token))
                 .to.emit(gachaHousekeeper, "Support")
                 .withArgs(id, token)
-            expect(await gachaHousekeeper.powerOf(id)).to.eq(power.add(token.mul(await gachaHousekeeper.lpTokenToHousekeeperPower()).div(expandTo18Decimals(1))))
             await expect(gachaHousekeeper.desupport(id, token))
                 .to.emit(gachaHousekeeper, "Desupport")
                 .withArgs(id, token)
-            expect(await gachaHousekeeper.powerOf(id)).to.eq(power)
         })
 
         it("permit", async () => {
 
             const id = BigNumber.from(0);
 
-            await expect(gachaHousekeeper.mint(BigNumber.from(12)))
+            await maidCoin.approve(gachaHousekeeper.address, expandTo18Decimals(1));
+            await expect(gachaHousekeeper.mint())
                 .to.emit(gachaHousekeeper, "Transfer")
                 .withArgs(constants.AddressZero, admin.address, id)
 

@@ -10,9 +10,10 @@ import "./interfaces/IGachaHousekeeper.sol";
 import "./libraries/Signature.sol";
 
 contract GachaHousekeeper is Ownable, ERC721("GachaHousekeeper", "GHSKP"), ERC721Enumerable, IGachaHousekeeper {
-    struct HousekeeperInfo {
+    struct GachaHousekeeperInfo {
         uint256 originPower;
         uint256 supportedLPTokenAmount;
+        uint256 destroyReturn;
     }
 
     bytes32 private immutable _CACHED_DOMAIN_SEPARATOR;
@@ -33,12 +34,24 @@ contract GachaHousekeeper is Ownable, ERC721("GachaHousekeeper", "GHSKP"), ERC72
     mapping(uint256 => uint256) public override nonces;
     mapping(address => uint256) public override noncesForAll;
 
+    IMaidCoin public immutable override maidCoin;
     IUniswapV2Pair public immutable override lpToken;
-    uint256 public override lpTokenToHousekeeperPower = 1;
-    HousekeeperInfo[] public override housekeepers;
+    IRNG public override rng;
 
-    constructor(IUniswapV2Pair _lpToken) {
+    uint256 public override lpTokenToHousekeeperPower = 1;
+    uint256 public override mintPrice = 1 * 1e18;
+    uint256 public override destroyReturn = 1 * 1e18;
+
+    GachaHousekeeperInfo[] public override housekeepers;
+
+    constructor(
+        IMaidCoin _maidCoin,
+        IUniswapV2Pair _lpToken,
+        IRNG _rng
+    ) {
+        maidCoin = _maidCoin;
         lpToken = _lpToken;
+        rng = _rng;
 
         _CACHED_CHAIN_ID = block.chainid;
         _HASHED_NAME = keccak256(bytes("GachaHousekeeper"));
@@ -73,14 +86,14 @@ contract GachaHousekeeper is Ownable, ERC721("GachaHousekeeper", "GHSKP"), ERC72
         emit ChangeLPTokenToHousekeeperPower(value);
     }
 
-    function mint(uint256 power) external onlyOwner returns (uint256 id) {
-        id = housekeepers.length;
-        housekeepers.push(HousekeeperInfo({originPower: power, supportedLPTokenAmount: 0}));
-        _mint(msg.sender, id);
+    function changePrice(uint256 _mintPrice, uint256 _destroyReturn) external onlyOwner {
+        mintPrice = _mintPrice;
+        destroyReturn = _destroyReturn;
+        emit ChangePrice(_mintPrice, _destroyReturn);
     }
 
     function powerOf(uint256 id) external view override returns (uint256) {
-        HousekeeperInfo storage housekeeper = housekeepers[id];
+        GachaHousekeeperInfo storage housekeeper = housekeepers[id];
         return housekeeper.originPower + (housekeeper.supportedLPTokenAmount * lpTokenToHousekeeperPower) / 1e18;
     }
 
@@ -196,5 +209,26 @@ contract GachaHousekeeper is Ownable, ERC721("GachaHousekeeper", "GHSKP"), ERC72
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
+    }
+
+    function mint() public override returns (uint256 id) {
+        id = housekeepers.length;
+        maidCoin.transferFrom(msg.sender, address(this), mintPrice);
+        housekeepers.push(GachaHousekeeperInfo({
+            originPower: (rng.generateRandomNumber(id, msg.sender) % 99) + 1,
+            supportedLPTokenAmount: 0,
+            destroyReturn: destroyReturn
+        }));
+        _mint(msg.sender, id);
+    }
+
+    function mintWithPermit(
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external override returns (uint256 id) {
+        maidCoin.permit(msg.sender, address(this), mintPrice, deadline, v, r, s);
+        return mint();
     }
 }
