@@ -78,4 +78,6 @@ interface IGachaHousekeeper is IERC721, IERC721Metadata, IERC721Enumerable {
         bytes32 r,
         bytes32 s
     ) external returns (uint256 id);
+
+    function destroy(uint256 id) external;
 }
