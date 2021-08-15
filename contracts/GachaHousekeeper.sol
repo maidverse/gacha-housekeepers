@@ -234,7 +234,7 @@ contract GachaHousekeeper is Ownable, ERC721("GachaHousekeeper", "GHSKP"), ERC72
     
     function destroy(uint256 id) external override {
         require(msg.sender == ownerOf(id), "GachaHousekeeper: Forbidden");
-        maidCoin.transfer(address(this), destroyReturn);
+        maidCoin.transfer(msg.sender, destroyReturn);
         _burn(id);
     }
 }
