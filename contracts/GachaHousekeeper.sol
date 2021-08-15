@@ -8,6 +8,8 @@ import "./uniswapv2/interfaces/IUniswapV2Pair.sol";
 import "./interfaces/IERC1271.sol";
 import "./interfaces/IGachaHousekeeper.sol";
 import "./libraries/Signature.sol";
+// import "./libraries/RandomPower_ver1.sol";
+import "./libraries/RandomPower_ver2.sol";
 
 contract GachaHousekeeper is Ownable, ERC721("GachaHousekeeper", "GHSKP"), ERC721Enumerable, IGachaHousekeeper {
     struct GachaHousekeeperInfo {
@@ -214,8 +216,9 @@ contract GachaHousekeeper is Ownable, ERC721("GachaHousekeeper", "GHSKP"), ERC72
     function mint() public override returns (uint256 id) {
         id = housekeepers.length;
         maidCoin.transferFrom(msg.sender, address(this), mintPrice);
+        uint256 prePower = (rng.generateRandomNumber(id, msg.sender) % 4950) + 1;
         housekeepers.push(GachaHousekeeperInfo({
-            originPower: (rng.generateRandomNumber(id, msg.sender) % 99) + 1,
+            originPower: RandomPower.findPower(prePower),
             supportedLPTokenAmount: 0,
             destroyReturn: destroyReturn
         }));
