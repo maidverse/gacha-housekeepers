@@ -42,7 +42,7 @@ contract GachaHousekeeper is Ownable, ERC721("GachaHousekeeper", "GHSKP"), ERC72
 
     uint256 public override lpTokenToHousekeeperPower = 1;
     uint256 public override mintPrice = 1 * 1e18;
-    uint256 public override destroyReturn = mintPrice * 10 / 100;
+    uint256 public override destroyReturn = (mintPrice * 10) / 100;
 
     IERC20 public immutable override sushi;
     IMasterChef public override sushiMasterChef;
@@ -143,7 +143,7 @@ contract GachaHousekeeper is Ownable, ERC721("GachaHousekeeper", "GHSKP"), ERC72
 
     function desupport(uint256 id, uint256 lpTokenAmount) external override {
         require(ownerOf(id) == msg.sender, "GachaHousekeeper: Forbidden");
-        
+
         require(lpTokenAmount > 0, "GachaHousekeeper: Invalid lpTokenAmount");
         uint256 _supportedLPTokenAmount = housekeepers[id].supportedLPTokenAmount;
 
@@ -281,12 +281,14 @@ contract GachaHousekeeper is Ownable, ERC721("GachaHousekeeper", "GHSKP"), ERC72
         id = housekeepers.length;
         maidCoin.transferFrom(msg.sender, address(this), mintPrice);
         uint256 prePower = (rng.generateRandomNumber(id, msg.sender) % 4950) + 1;
-        housekeepers.push(GachaHousekeeperInfo({
-            originPower: RandomPower.findPower(prePower),
-            supportedLPTokenAmount: 0,
-            sushiRewardDebt: 0,
-            destroyReturn: destroyReturn
-        }));
+        housekeepers.push(
+            GachaHousekeeperInfo({
+                originPower: RandomPower.findPower(prePower),
+                supportedLPTokenAmount: 0,
+                sushiRewardDebt: 0,
+                destroyReturn: destroyReturn
+            })
+        );
         _mint(msg.sender, id);
     }
 
@@ -299,7 +301,7 @@ contract GachaHousekeeper is Ownable, ERC721("GachaHousekeeper", "GHSKP"), ERC72
         maidCoin.permit(msg.sender, address(this), mintPrice, deadline, v, r, s);
         return mint();
     }
-    
+
     function destroy(uint256 id) external override {
         require(msg.sender == ownerOf(id), "GachaHousekeeper: Forbidden");
         maidCoin.transfer(msg.sender, destroyReturn);

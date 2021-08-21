@@ -24,11 +24,11 @@ interface IGachaHousekeeper is IERC721, IERC721Metadata, IERC721Enumerable {
     function nonces(uint256 id) external view returns (uint256);
 
     function noncesForAll(address owner) external view returns (uint256);
-    
+
     function maidCoin() external view returns (IMaidCoin);
 
     function lpToken() external view returns (IUniswapV2Pair);
-    
+
     function rng() external view returns (IRNG);
 
     function lpTokenToHousekeeperPower() external view returns (uint256);
@@ -37,7 +37,15 @@ interface IGachaHousekeeper is IERC721, IERC721Metadata, IERC721Enumerable {
 
     function destroyReturn() external view returns (uint256);
 
-    function housekeepers(uint256 id) external view returns (uint256 originPower, uint256 supportedLPTokenAmount, uint256 sushiRewardDebt, uint256 destroyReturn);
+    function housekeepers(uint256 id)
+        external
+        view
+        returns (
+            uint256 originPower,
+            uint256 supportedLPTokenAmount,
+            uint256 sushiRewardDebt,
+            uint256 destroyReturn
+        );
 
     function sushi() external view returns (IERC20);
 
@@ -87,6 +95,7 @@ interface IGachaHousekeeper is IERC721, IERC721Metadata, IERC721Enumerable {
     ) external;
 
     function mint() external returns (uint256 id);
+
     function mintWithPermit(
         uint256 deadline,
         uint8 v,
@@ -95,6 +104,6 @@ interface IGachaHousekeeper is IERC721, IERC721Metadata, IERC721Enumerable {
     ) external returns (uint256 id);
 
     function destroy(uint256 id) external;
-    
+
     function setSushiMasterChef(IMasterChef _masterChef, uint256 pid) external;
 }

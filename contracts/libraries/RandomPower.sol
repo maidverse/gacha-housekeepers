@@ -117,12 +117,16 @@ library RandomPower {
         numbers[18] = 4950;
     }
 
-    function _findPower(uint16 number, uint16[20] memory numbers, uint16 diff) internal pure returns (uint256 power) {
+    function _findPower(
+        uint16 number,
+        uint16[20] memory numbers,
+        uint16 diff
+    ) internal pure returns (uint256 power) {
         uint16 low = 0;
         uint16 high = 19;
 
         uint16 index = 0;
-        while(low <= high) {
+        while (low <= high) {
             uint16 mid = (high + low) / 2;
             uint16 guess = numbers[mid];
 
@@ -139,10 +143,10 @@ library RandomPower {
     }
 
     function findPower(uint256 number) internal pure returns (uint256 power) {
-        if(number <= 1790) return _findPower(uint16(number), _numbers1(), 0);
-        else if(number <= 3180) return _findPower(uint16(number), _numbers2(), 20);
-        else if(number <= 4170) return _findPower(uint16(number), _numbers3(), 40);
-        else if(number <= 4760) return _findPower(uint16(number), _numbers4(), 60);
+        if (number <= 1790) return _findPower(uint16(number), _numbers1(), 0);
+        else if (number <= 3180) return _findPower(uint16(number), _numbers2(), 20);
+        else if (number <= 4170) return _findPower(uint16(number), _numbers3(), 40);
+        else if (number <= 4760) return _findPower(uint16(number), _numbers4(), 60);
         else return _findPower(uint16(number), _numbers5(), 80);
     }
 }
