@@ -8,8 +8,7 @@ import "./uniswapv2/interfaces/IUniswapV2Pair.sol";
 import "./interfaces/IERC1271.sol";
 import "./interfaces/IGachaHousekeeper.sol";
 import "./libraries/Signature.sol";
-// import "./libraries/RandomPower_ver1.sol";
-import "./libraries/RandomPower_ver2.sol";
+import "./libraries/RandomPower.sol";
 
 contract GachaHousekeeper is Ownable, ERC721("GachaHousekeeper", "GHSKP"), ERC721Enumerable, IGachaHousekeeper {
     struct GachaHousekeeperInfo {
