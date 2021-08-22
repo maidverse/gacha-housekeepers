@@ -6,11 +6,11 @@ import "./libraries/ERC721.sol";
 import "./libraries/ERC721Enumerable.sol";
 import "./uniswapv2/interfaces/IUniswapV2Pair.sol";
 import "./interfaces/IERC1271.sol";
-import "./interfaces/IGachaHousekeeper.sol";
+import "./interfaces/IGachaHousekeepers.sol";
 import "./libraries/Signature.sol";
 import "./libraries/RandomPower.sol";
 
-contract GachaHousekeeper is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GHSKP"), ERC721Enumerable, IGachaHousekeeper {
+contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GHSKP"), ERC721Enumerable, IGachaHousekeepers {
     struct GachaHousekeeperInfo {
         uint256 originPower;
         uint256 supportedLPTokenAmount;

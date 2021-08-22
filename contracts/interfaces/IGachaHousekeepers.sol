@@ -9,7 +9,7 @@ import "./IMaidCoin.sol";
 import "./IRNG.sol";
 import "./IMasterChef.sol";
 
-interface IGachaHousekeeper is IERC721, IERC721Metadata, IERC721Enumerable {
+interface IGachaHousekeepers is IERC721, IERC721Metadata, IERC721Enumerable {
     event ChangeLPTokenToHousekeeperPower(uint256 value);
     event ChangePrice(uint256 mintPrice, uint256 destroyReturn);
     event Support(uint256 indexed id, uint256 lpTokenAmount);
