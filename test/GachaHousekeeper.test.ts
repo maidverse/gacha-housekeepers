@@ -93,7 +93,7 @@ describe("GachaHousekeeper", () => {
                 .withArgs(constants.AddressZero, admin.address, id)
             console.log((await gachaHousekeeper.powerOf(id)).toString());
             expect(await gachaHousekeeper.totalSupply()).to.eq(BigNumber.from(1))
-            expect(await gachaHousekeeper.tokenURI(id)).to.eq(`https://api.maidcoin.org/gachahousekeeper/${id}`)
+            expect(await gachaHousekeeper.tokenURI(id)).to.eq(`https://api.maidcoin.org/gachahousekeepers/${id}`)
         })
 
         it("mint with permit", async () => {
@@ -116,7 +116,7 @@ describe("GachaHousekeeper", () => {
                 .withArgs(constants.AddressZero, admin.address, id)
             console.log((await gachaHousekeeper.powerOf(id)).toString());
             expect(await gachaHousekeeper.totalSupply()).to.eq(BigNumber.from(1))
-            expect(await gachaHousekeeper.tokenURI(id)).to.eq(`https://api.maidcoin.org/gachahousekeeper/${id}`)
+            expect(await gachaHousekeeper.tokenURI(id)).to.eq(`https://api.maidcoin.org/gachahousekeepers/${id}`)
         })
 
         it("support, powerOf", async () => {

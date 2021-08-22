@@ -10,7 +10,7 @@ import "./interfaces/IGachaHousekeeper.sol";
 import "./libraries/Signature.sol";
 import "./libraries/RandomPower.sol";
 
-contract GachaHousekeeper is Ownable, ERC721("GachaHousekeeper", "GHSKP"), ERC721Enumerable, IGachaHousekeeper {
+contract GachaHousekeeper is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GHSKP"), ERC721Enumerable, IGachaHousekeeper {
     struct GachaHousekeeperInfo {
         uint256 originPower;
         uint256 supportedLPTokenAmount;
@@ -65,14 +65,14 @@ contract GachaHousekeeper is Ownable, ERC721("GachaHousekeeper", "GHSKP"), ERC72
         sushi = _sushi;
 
         _CACHED_CHAIN_ID = block.chainid;
-        _HASHED_NAME = keccak256(bytes("GachaHousekeeper"));
+        _HASHED_NAME = keccak256(bytes("MaidCoin Gacha Housekeepers"));
         _HASHED_VERSION = keccak256(bytes("1"));
         _TYPE_HASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
         _CACHED_DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes("GachaHousekeeper")),
+                keccak256(bytes("MaidCoin Gacha Housekeepers")),
                 keccak256(bytes("1")),
                 block.chainid,
                 address(this)
@@ -81,7 +81,7 @@ contract GachaHousekeeper is Ownable, ERC721("GachaHousekeeper", "GHSKP"), ERC72
     }
 
     function _baseURI() internal pure override returns (string memory) {
-        return "https://api.maidcoin.org/gachahousekeeper/";
+        return "https://api.maidcoin.org/gachahousekeepers/";
     }
 
     function DOMAIN_SEPARATOR() public view override returns (bytes32) {
