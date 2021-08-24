@@ -109,8 +109,8 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
     }
 
     function support(uint256 id, uint256 lpTokenAmount) public override {
-        require(ownerOf(id) == msg.sender, "GachaHousekeeper: Forbidden");
-        require(lpTokenAmount > 0, "GachaHousekeeper: Invalid lpTokenAmount");
+        require(ownerOf(id) == msg.sender, "GachaHousekeepers: Forbidden");
+        require(lpTokenAmount > 0, "GachaHousekeepers: Invalid lpTokenAmount");
 
         uint256 _supportedLPTokenAmount = housekeepers[id].supportedLPTokenAmount;
 
@@ -142,9 +142,9 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
     }
 
     function desupport(uint256 id, uint256 lpTokenAmount) external override {
-        require(ownerOf(id) == msg.sender, "GachaHousekeeper: Forbidden");
+        require(ownerOf(id) == msg.sender, "GachaHousekeepers: Forbidden");
 
-        require(lpTokenAmount > 0, "GachaHousekeeper: Invalid lpTokenAmount");
+        require(lpTokenAmount > 0, "GachaHousekeepers: Invalid lpTokenAmount");
         uint256 _supportedLPTokenAmount = housekeepers[id].supportedLPTokenAmount;
 
         housekeepers[id].supportedLPTokenAmount = _supportedLPTokenAmount - lpTokenAmount;
@@ -163,15 +163,15 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
     }
 
     function claimSushiReward(uint256 id) public override {
-        require(ownerOf(id) == msg.sender, "GachaHousekeeper: Forbidden");
+        require(ownerOf(id) == msg.sender, "GachaHousekeepers: Forbidden");
         uint256 _pid = pid;
-        require(_pid > 0, "GachaHousekeeper: Unclaimable");
+        require(_pid > 0, "GachaHousekeepers: Unclaimable");
         uint256 _supportedLPTokenAmount = housekeepers[id].supportedLPTokenAmount;
 
         uint256 _totalSupportedLPTokenAmount = sushiMasterChef.userInfo(_pid, address(this)).amount;
         uint256 _accSushiPerShare = _depositToSushiMasterChef(_pid, 0, _totalSupportedLPTokenAmount);
         uint256 pending = (_supportedLPTokenAmount * _accSushiPerShare) / 1e18 - housekeepers[id].sushiRewardDebt;
-        require(pending > 0, "GachaHousekeeper: Nothing can be claimed");
+        require(pending > 0, "GachaHousekeepers: Nothing can be claimed");
         safeSushiTransfer(msg.sender, pending);
         housekeepers[id].sushiRewardDebt = (_supportedLPTokenAmount * _accSushiPerShare) / 1e18;
     }
@@ -199,7 +199,7 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
         bytes32 r,
         bytes32 s
     ) external override {
-        require(block.timestamp <= deadline, "GachaHousekeeper: Expired deadline");
+        require(block.timestamp <= deadline, "GachaHousekeepers: Expired deadline");
         bytes32 _DOMAIN_SEPARATOR = DOMAIN_SEPARATOR();
 
         bytes32 digest = keccak256(
@@ -212,16 +212,16 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
         nonces[id] += 1;
 
         address owner = ownerOf(id);
-        require(spender != owner, "GachaHousekeeper: Invalid spender");
+        require(spender != owner, "GachaHousekeepers: Invalid spender");
 
         if (Address.isContract(owner)) {
             require(
                 IERC1271(owner).isValidSignature(digest, abi.encodePacked(r, s, v)) == 0x1626ba7e,
-                "GachaHousekeeper: Unauthorized"
+                "GachaHousekeepers: Unauthorized"
             );
         } else {
             address recoveredAddress = Signature.recover(digest, v, r, s);
-            require(recoveredAddress == owner, "GachaHousekeeper: Unauthorized");
+            require(recoveredAddress == owner, "GachaHousekeepers: Unauthorized");
         }
 
         _approve(spender, id);
@@ -235,7 +235,7 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
         bytes32 r,
         bytes32 s
     ) external override {
-        require(block.timestamp <= deadline, "GachaHousekeeper: Expired deadline");
+        require(block.timestamp <= deadline, "GachaHousekeepers: Expired deadline");
         bytes32 _DOMAIN_SEPARATOR = DOMAIN_SEPARATOR();
 
         bytes32 digest = keccak256(
@@ -250,11 +250,11 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
         if (Address.isContract(owner)) {
             require(
                 IERC1271(owner).isValidSignature(digest, abi.encodePacked(r, s, v)) == 0x1626ba7e,
-                "GachaHousekeeper: Unauthorized"
+                "GachaHousekeepers: Unauthorized"
             );
         } else {
             address recoveredAddress = Signature.recover(digest, v, r, s);
-            require(recoveredAddress == owner, "GachaHousekeeper: Unauthorized");
+            require(recoveredAddress == owner, "GachaHousekeepers: Unauthorized");
         }
 
         _setApprovalForAll(owner, spender, true);
@@ -303,13 +303,13 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
     }
 
     function destroy(uint256 id) external override {
-        require(msg.sender == ownerOf(id), "GachaHousekeeper: Forbidden");
+        require(msg.sender == ownerOf(id), "GachaHousekeepers: Forbidden");
         maidCoin.transfer(msg.sender, destroyReturn);
         _burn(id);
     }
 
     function setSushiMasterChef(IMasterChef _masterChef, uint256 _pid) external override onlyOwner {
-        require(address(_masterChef.poolInfo(_pid).lpToken) == address(lpToken), "GachaHousekeeper: Invalid pid");
+        require(address(_masterChef.poolInfo(_pid).lpToken) == address(lpToken), "GachaHousekeepers: Invalid pid");
         if (!initialDeposited) {
             initialDeposited = true;
             lpToken.approve(address(_masterChef), type(uint256).max);

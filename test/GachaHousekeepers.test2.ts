@@ -34,19 +34,19 @@ const setupTest = async () => {
     const mc = await MockMasterChef.deploy(sushi.address, deployer.address, INITIAL_REWARD_PER_BLOCK, 0, 0);
     await mine();
 
-    const GachaHousekeeper = await ethers.getContractFactory("GachaHousekeeper");
-    const keeper = await GachaHousekeeper.deploy(Maid.address, lpToken.address, rng.address, sushi.address);
+    const GachaHousekeepers = await ethers.getContractFactory("GachaHousekeepers");
+    const keepers = await GachaHousekeepers.deploy(Maid.address, lpToken.address, rng.address, sushi.address);
     await mine();
 
-    await Maid.approve(keeper.address, ethers.constants.MaxUint256);
-    await keeper.mint();
-    await keeper.mint();
-    await keeper.mint();
+    await Maid.approve(keepers.address, ethers.constants.MaxUint256);
+    await keepers.mint();
+    await keepers.mint();
+    await keepers.mint();
     await mine();
 
-    await keeper.transferFrom(deployer.address, alice.address, 0);
-    await keeper.transferFrom(deployer.address, bob.address, 1);
-    await keeper.transferFrom(deployer.address, carol.address, 2);
+    await keepers.transferFrom(deployer.address, alice.address, 0);
+    await keepers.transferFrom(deployer.address, bob.address, 1);
+    await keepers.transferFrom(deployer.address, carol.address, 2);
     await mine();
 
     await lpToken.connect(alice).approve(mc.address, ethers.constants.MaxUint256);
@@ -54,10 +54,10 @@ const setupTest = async () => {
     await lpToken.connect(carol).approve(mc.address, ethers.constants.MaxUint256);
     await lpToken.connect(dan).approve(mc.address, ethers.constants.MaxUint256);
 
-    await lpToken.connect(alice).approve(keeper.address, ethers.constants.MaxUint256);
-    await lpToken.connect(bob).approve(keeper.address, ethers.constants.MaxUint256);
-    await lpToken.connect(carol).approve(keeper.address, ethers.constants.MaxUint256);
-    await lpToken.connect(dan).approve(keeper.address, ethers.constants.MaxUint256);
+    await lpToken.connect(alice).approve(keepers.address, ethers.constants.MaxUint256);
+    await lpToken.connect(bob).approve(keepers.address, ethers.constants.MaxUint256);
+    await lpToken.connect(carol).approve(keepers.address, ethers.constants.MaxUint256);
+    await lpToken.connect(dan).approve(keepers.address, ethers.constants.MaxUint256);
 
     await sushi.transferOwnership(mc.address);
 
@@ -75,7 +75,7 @@ const setupTest = async () => {
         lpToken,
         sushi,
         mc,
-        keeper,
+        keeper: keepers,
     };
 };
 
@@ -301,10 +301,10 @@ describe("Housekeeper interact with MasterChef", function () {
         expect(await keeper.pendingSushiReward(1)).to.be.equal(0);
 
         await expect(keeper.connect(alice).claimSushiReward(0)).to.be.revertedWith(
-            "GachaHousekeeper: Nothing can be claimed"
+            "GachaHousekeepers: Nothing can be claimed"
         );
         await expect(keeper.connect(bob).claimSushiReward(1)).to.be.revertedWith(
-            "GachaHousekeeper: Nothing can be claimed"
+            "GachaHousekeepers: Nothing can be claimed"
         );
 
         expect((await mc.userInfo(2, keeper.address)).amount).to.be.equal(1000);
