@@ -281,15 +281,17 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
         id = housekeepers.length;
         maidCoin.transferFrom(msg.sender, address(this), mintPrice);
         uint256 prePower = (rng.generateRandomNumber(id, msg.sender) % 4950) + 1;
+        uint256 power = RandomPower.findPower(prePower);
         housekeepers.push(
             GachaHousekeeperInfo({
-                originPower: RandomPower.findPower(prePower),
+                originPower: power,
                 supportedLPTokenAmount: 0,
                 sushiRewardDebt: 0,
                 destroyReturn: destroyReturn
             })
         );
         _mint(msg.sender, id);
+        emit Mint(msg.sender, id, power);
     }
 
     function mintWithPermit(

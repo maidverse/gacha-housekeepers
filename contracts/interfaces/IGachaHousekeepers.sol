@@ -14,6 +14,7 @@ interface IGachaHousekeepers is IERC721, IERC721Metadata, IERC721Enumerable {
     event ChangePrice(uint256 mintPrice, uint256 destroyReturn);
     event Support(uint256 indexed id, uint256 lpTokenAmount);
     event Desupport(uint256 indexed id, uint256 lpTokenAmount);
+    event Mint(address indexed user, uint256 indexed id, uint256 power);
 
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 
