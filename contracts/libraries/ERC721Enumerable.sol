@@ -3,12 +3,14 @@
 pragma solidity ^0.8.0;
 
 import "./ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
+import "../interfaces/IERC721Enumerable.sol";
 
 /**
  * @dev This implements an optional extension of {ERC721} defined in the EIP that adds
  * enumerability of all the token ids in the contract as well as all token ids owned by each
  * account.
+ * @dev MaidVerse: This is for NFT minted in order from 0 and have burn function.
+ * This doesn't have tokenByIndex function.
  */
 abstract contract ERC721Enumerable is ERC721, IERC721Enumerable {
     // Mapping from owner to list of owned token IDs
@@ -16,19 +18,6 @@ abstract contract ERC721Enumerable is ERC721, IERC721Enumerable {
 
     // Mapping from token ID to index of the owner tokens list
     mapping(uint256 => uint256) private _ownedTokensIndex;
-
-    // Array with all token ids, used for enumeration
-    uint256[] private _allTokens;
-
-    // Mapping from token id to position in the allTokens array
-    mapping(uint256 => uint256) private _allTokensIndex;
-
-    /**
-     * @dev See {IERC165-supportsInterface}.
-     */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(IERC165, ERC721) returns (bool) {
-        return interfaceId == type(IERC721Enumerable).interfaceId || super.supportsInterface(interfaceId);
-    }
 
     /**
      * @dev See {IERC721Enumerable-tokenOfOwnerByIndex}.
@@ -41,16 +30,9 @@ abstract contract ERC721Enumerable is ERC721, IERC721Enumerable {
     /**
      * @dev See {IERC721Enumerable-totalSupply}.
      */
+    //TODO
     function totalSupply() public view virtual override returns (uint256) {
-        return _allTokens.length;
-    }
-
-    /**
-     * @dev See {IERC721Enumerable-tokenByIndex}.
-     */
-    function tokenByIndex(uint256 index) public view virtual override returns (uint256) {
-        require(index < ERC721Enumerable.totalSupply(), "ERC721Enumerable: global index out of bounds");
-        return _allTokens[index];
+        // return _allTokens.length;
     }
 
     /**
@@ -76,13 +58,11 @@ abstract contract ERC721Enumerable is ERC721, IERC721Enumerable {
         super._beforeTokenTransfer(from, to, tokenId);
 
         if (from == address(0)) {
-            _addTokenToAllTokensEnumeration(tokenId);
-        } else if (from != to) {
+            _addTokenToOwnerEnumeration(to, tokenId);
+        } else if (to == address(0)) {
             _removeTokenFromOwnerEnumeration(from, tokenId);
-        }
-        if (to == address(0)) {
-            _removeTokenFromAllTokensEnumeration(tokenId);
-        } else if (to != from) {
+        } else {
+            _removeTokenFromOwnerEnumeration(from, tokenId);
             _addTokenToOwnerEnumeration(to, tokenId);
         }
     }
@@ -96,15 +76,6 @@ abstract contract ERC721Enumerable is ERC721, IERC721Enumerable {
         uint256 length = ERC721.balanceOf(to);
         _ownedTokens[to][length] = tokenId;
         _ownedTokensIndex[tokenId] = length;
-    }
-
-    /**
-     * @dev Private function to add a token to this extension's token tracking data structures.
-     * @param tokenId uint256 ID of the token to be added to the tokens list
-     */
-    function _addTokenToAllTokensEnumeration(uint256 tokenId) private {
-        _allTokensIndex[tokenId] = _allTokens.length;
-        _allTokens.push(tokenId);
     }
 
     /**
@@ -133,30 +104,5 @@ abstract contract ERC721Enumerable is ERC721, IERC721Enumerable {
         // This also deletes the contents at the last position of the array
         delete _ownedTokensIndex[tokenId];
         delete _ownedTokens[from][lastTokenIndex];
-    }
-
-    /**
-     * @dev Private function to remove a token from this extension's token tracking data structures.
-     * This has O(1) time complexity, but alters the order of the _allTokens array.
-     * @param tokenId uint256 ID of the token to be removed from the tokens list
-     */
-    function _removeTokenFromAllTokensEnumeration(uint256 tokenId) private {
-        // To prevent a gap in the tokens array, we store the last token in the index of the token to delete, and
-        // then delete the last slot (swap and pop).
-
-        uint256 lastTokenIndex = _allTokens.length - 1;
-        uint256 tokenIndex = _allTokensIndex[tokenId];
-
-        // When the token to delete is the last token, the swap operation is unnecessary. However, since this occurs so
-        // rarely (when the last minted token is burnt) that we still do the swap here to avoid the gas cost of adding
-        // an 'if' statement (like in _removeTokenFromOwnerEnumeration)
-        uint256 lastTokenId = _allTokens[lastTokenIndex];
-
-        _allTokens[tokenIndex] = lastTokenId; // Move the last token to the slot of the to-delete token
-        _allTokensIndex[lastTokenId] = tokenIndex; // Update the moved token's index
-
-        // This also deletes the contents at the last position of the array
-        delete _allTokensIndex[tokenId];
-        _allTokens.pop();
     }
 }
