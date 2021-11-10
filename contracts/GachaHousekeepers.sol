@@ -9,8 +9,9 @@ import "./interfaces/IERC1271.sol";
 import "./interfaces/IGachaHousekeepers.sol";
 import "./libraries/Signature.sol";
 import "./libraries/RandomPower.sol";
+import "./libraries/MasterChefModule.sol";
 
-contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GHSKP"), ERC721Enumerable, IGachaHousekeepers {
+contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GHSKP"), ERC721Enumerable, MasterChefModule, IGachaHousekeepers {
     struct GachaHousekeeperInfo {
         uint256 originPower;
         uint256 supportedLPTokenAmount;
@@ -37,19 +38,10 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
     mapping(address => uint256) public override noncesForAll;
 
     IMaidCoin public immutable override maidCoin;
-    IUniswapV2Pair public immutable override lpToken;
     IRNG public override rng;
 
-    uint256 public override lpTokenToHousekeeperPower = 1;
     uint256 public override mintPrice = 1 * 1e18;
     uint256 public override destroyReturn = (mintPrice * 10) / 100;
-
-    IERC20 public immutable override sushi;
-    IMasterChef public override sushiMasterChef;
-    uint256 public override pid;
-    uint256 public override sushiLastRewardBlock;
-    uint256 public override accSushiPerShare;
-    bool private initialDeposited;
 
     GachaHousekeeperInfo[] public override housekeepers;
 
@@ -58,11 +50,9 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
         IUniswapV2Pair _lpToken,
         IRNG _rng,
         IERC20 _sushi
-    ) {
+    ) MasterChefModule(_lpToken, _sushi) {
         maidCoin = _maidCoin;
-        lpToken = _lpToken;
         rng = _rng;
-        sushi = _sushi;
 
         _CACHED_CHAIN_ID = block.chainid;
         _HASHED_NAME = keccak256(bytes("MaidCoin Gacha Housekeepers"));
@@ -96,11 +86,6 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
         return housekeepers.length;
     }
 
-    function changeLPTokenToHousekeeperPower(uint256 value) external onlyOwner {
-        lpTokenToHousekeeperPower = value;
-        emit ChangeLPTokenToHousekeeperPower(value);
-    }
-
     function changePrice(uint256 _mintPrice, uint256 _destroyReturn) external onlyOwner {
         mintPrice = _mintPrice;
         destroyReturn = _destroyReturn;
@@ -121,13 +106,14 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
         housekeepers[id].supportedLPTokenAmount = _supportedLPTokenAmount + lpTokenAmount;
         lpToken.transferFrom(msg.sender, address(this), lpTokenAmount);
 
-        uint256 _pid = pid;
+        uint256 _pid = masterChefPid;
         if (_pid > 0) {
-            uint256 _totalSupportedLPTokenAmount = sushiMasterChef.userInfo(_pid, address(this)).amount;
-            uint256 _accSushiPerShare = _depositToSushiMasterChef(_pid, lpTokenAmount, _totalSupportedLPTokenAmount);
-            uint256 pending = (_supportedLPTokenAmount * _accSushiPerShare) / 1e18 - housekeepers[id].sushiRewardDebt;
-            if (pending > 0) safeSushiTransfer(msg.sender, pending);
-            housekeepers[id].sushiRewardDebt = ((_supportedLPTokenAmount + lpTokenAmount) * _accSushiPerShare) / 1e18;
+            housekeepers[id].sushiRewardDebt = _depositModule(
+                _pid,
+                lpTokenAmount,
+                _supportedLPTokenAmount,
+                housekeepers[id].sushiRewardDebt
+            );
         }
 
         emit Support(id, lpTokenAmount);
@@ -147,19 +133,19 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
 
     function desupport(uint256 id, uint256 lpTokenAmount) external override {
         require(ownerOf(id) == msg.sender, "GachaHousekeepers: Forbidden");
-
         require(lpTokenAmount > 0, "GachaHousekeepers: Invalid lpTokenAmount");
         uint256 _supportedLPTokenAmount = housekeepers[id].supportedLPTokenAmount;
 
         housekeepers[id].supportedLPTokenAmount = _supportedLPTokenAmount - lpTokenAmount;
 
-        uint256 _pid = pid;
+        uint256 _pid = masterChefPid;
         if (_pid > 0) {
-            uint256 _totalSupportedLPTokenAmount = sushiMasterChef.userInfo(_pid, address(this)).amount;
-            uint256 _accSushiPerShare = _withdrawFromSushiMasterChef(_pid, lpTokenAmount, _totalSupportedLPTokenAmount);
-            uint256 pending = (_supportedLPTokenAmount * _accSushiPerShare) / 1e18 - housekeepers[id].sushiRewardDebt;
-            if (pending > 0) safeSushiTransfer(msg.sender, pending);
-            housekeepers[id].sushiRewardDebt = ((_supportedLPTokenAmount - lpTokenAmount) * _accSushiPerShare) / 1e18;
+            housekeepers[id].sushiRewardDebt = _withdrawModule(
+                _pid,
+                lpTokenAmount,
+                _supportedLPTokenAmount,
+                housekeepers[id].sushiRewardDebt
+            );
         }
 
         lpToken.transfer(msg.sender, lpTokenAmount);
@@ -168,31 +154,14 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
 
     function claimSushiReward(uint256 id) public override {
         require(ownerOf(id) == msg.sender, "GachaHousekeepers: Forbidden");
-        uint256 _pid = pid;
-        require(_pid > 0, "GachaHousekeepers: Unclaimable");
-        uint256 _supportedLPTokenAmount = housekeepers[id].supportedLPTokenAmount;
-
-        uint256 _totalSupportedLPTokenAmount = sushiMasterChef.userInfo(_pid, address(this)).amount;
-        uint256 _accSushiPerShare = _depositToSushiMasterChef(_pid, 0, _totalSupportedLPTokenAmount);
-        uint256 pending = (_supportedLPTokenAmount * _accSushiPerShare) / 1e18 - housekeepers[id].sushiRewardDebt;
-        require(pending > 0, "GachaHousekeepers: Nothing can be claimed");
-        safeSushiTransfer(msg.sender, pending);
-        housekeepers[id].sushiRewardDebt = (_supportedLPTokenAmount * _accSushiPerShare) / 1e18;
+        housekeepers[id].sushiRewardDebt = _claimSushiReward(
+            housekeepers[id].supportedLPTokenAmount,
+            housekeepers[id].sushiRewardDebt
+        );
     }
 
     function pendingSushiReward(uint256 id) external view override returns (uint256) {
-        uint256 _pid = pid;
-        if (_pid == 0) return 0;
-        uint256 _supportedLPTokenAmount = housekeepers[id].supportedLPTokenAmount;
-        uint256 _totalSupportedLPTokenAmount = sushiMasterChef.userInfo(_pid, address(this)).amount;
-
-        uint256 _accSushiPerShare = accSushiPerShare;
-        if (block.number > sushiLastRewardBlock && _totalSupportedLPTokenAmount != 0) {
-            uint256 reward = sushiMasterChef.pendingSushi(pid, address(this));
-            _accSushiPerShare += ((reward * 1e18) / _totalSupportedLPTokenAmount);
-        }
-
-        return (_supportedLPTokenAmount * _accSushiPerShare) / 1e18 - housekeepers[id].sushiRewardDebt;
+        return _pendingSushiReward(housekeepers[id].supportedLPTokenAmount, housekeepers[id].sushiRewardDebt);
     }
 
     function permit(
@@ -275,7 +244,7 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        override(ERC721, ERC721Enumerable, IERC165)
+        override(ERC721, IERC165)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
@@ -312,82 +281,5 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
         require(msg.sender == ownerOf(id), "GachaHousekeepers: Forbidden");
         maidCoin.transfer(msg.sender, destroyReturn);
         _burn(id);
-    }
-
-    function setSushiMasterChef(IMasterChef _masterChef, uint256 _pid) external override onlyOwner {
-        require(address(_masterChef.poolInfo(_pid).lpToken) == address(lpToken), "GachaHousekeepers: Invalid pid");
-        if (!initialDeposited) {
-            initialDeposited = true;
-            lpToken.approve(address(_masterChef), type(uint256).max);
-
-            sushiMasterChef = _masterChef;
-            pid = _pid;
-            _depositToSushiMasterChef(_pid, lpToken.balanceOf(address(this)), 0);
-        } else {
-            IMasterChef oldChef = sushiMasterChef;
-            uint256 oldpid = pid;
-            _withdrawFromSushiMasterChef(oldpid, oldChef.userInfo(oldpid, address(this)).amount, 0);
-            if (_masterChef != oldChef) {
-                lpToken.approve(address(oldChef), 0);
-                lpToken.approve(address(_masterChef), type(uint256).max);
-            }
-
-            sushiMasterChef = _masterChef;
-            pid = _pid;
-            _depositToSushiMasterChef(_pid, lpToken.balanceOf(address(this)), 0);
-        }
-    }
-
-    function _depositToSushiMasterChef(
-        uint256 _pid,
-        uint256 _amount,
-        uint256 _totalSupportedLPTokenAmount
-    ) internal returns (uint256 _accSushiPerShare) {
-        return _toSushiMasterChef(true, _pid, _amount, _totalSupportedLPTokenAmount);
-    }
-
-    function _withdrawFromSushiMasterChef(
-        uint256 _pid,
-        uint256 _amount,
-        uint256 _totalSupportedLPTokenAmount
-    ) internal returns (uint256 _accSushiPerShare) {
-        return _toSushiMasterChef(false, _pid, _amount, _totalSupportedLPTokenAmount);
-    }
-
-    function _toSushiMasterChef(
-        bool deposit,
-        uint256 _pid,
-        uint256 _amount,
-        uint256 _totalSupportedLPTokenAmount
-    ) internal returns (uint256) {
-        uint256 reward;
-        if (block.number <= sushiLastRewardBlock) {
-            if (deposit) sushiMasterChef.deposit(_pid, _amount);
-            else sushiMasterChef.withdraw(_pid, _amount);
-            return accSushiPerShare;
-        } else {
-            uint256 balance0 = sushi.balanceOf(address(this));
-            if (deposit) sushiMasterChef.deposit(_pid, _amount);
-            else sushiMasterChef.withdraw(_pid, _amount);
-            uint256 balance1 = sushi.balanceOf(address(this));
-            reward = balance1 - balance0;
-        }
-        sushiLastRewardBlock = block.number;
-        if (_totalSupportedLPTokenAmount > 0 && reward > 0) {
-            uint256 _accSushiPerShare = accSushiPerShare + ((reward * 1e18) / _totalSupportedLPTokenAmount);
-            accSushiPerShare = _accSushiPerShare;
-            return _accSushiPerShare;
-        } else {
-            return accSushiPerShare;
-        }
-    }
-
-    function safeSushiTransfer(address _to, uint256 _amount) internal {
-        uint256 sushiBal = sushi.balanceOf(address(this));
-        if (_amount > sushiBal) {
-            sushi.transfer(_to, sushiBal);
-        } else {
-            sushi.transfer(_to, _amount);
-        }
     }
 }

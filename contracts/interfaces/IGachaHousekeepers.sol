@@ -3,13 +3,12 @@ pragma solidity >=0.5.0;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
-import "../uniswapv2/interfaces/IUniswapV2Pair.sol";
+import "./IERC721Enumerable.sol";
 import "./IMaidCoin.sol";
 import "./IRNG.sol";
-import "./IMasterChef.sol";
+import "./IMasterChefModule.sol";
 
-interface IGachaHousekeepers is IERC721, IERC721Metadata, IERC721Enumerable {
+interface IGachaHousekeepers is IERC721, IERC721Metadata, IERC721Enumerable, IMasterChefModule {
     event ChangeLPTokenToHousekeeperPower(uint256 value);
     event ChangePrice(uint256 mintPrice, uint256 destroyReturn);
     event Support(uint256 indexed id, uint256 lpTokenAmount);
@@ -28,11 +27,7 @@ interface IGachaHousekeepers is IERC721, IERC721Metadata, IERC721Enumerable {
 
     function maidCoin() external view returns (IMaidCoin);
 
-    function lpToken() external view returns (IUniswapV2Pair);
-
     function rng() external view returns (IRNG);
-
-    function lpTokenToHousekeeperPower() external view returns (uint256);
 
     function mintPrice() external view returns (uint256);
 
@@ -47,16 +42,6 @@ interface IGachaHousekeepers is IERC721, IERC721Metadata, IERC721Enumerable {
             uint256 sushiRewardDebt,
             uint256 destroyReturn
         );
-
-    function sushi() external view returns (IERC20);
-
-    function sushiMasterChef() external view returns (IMasterChef);
-
-    function pid() external view returns (uint256);
-
-    function sushiLastRewardBlock() external view returns (uint256);
-
-    function accSushiPerShare() external view returns (uint256);
 
     function powerAndLP(uint256 id) external view returns (uint256, uint256);
 
@@ -105,6 +90,4 @@ interface IGachaHousekeepers is IERC721, IERC721Metadata, IERC721Enumerable {
     ) external returns (uint256 id);
 
     function destroy(uint256 id) external;
-
-    function setSushiMasterChef(IMasterChef _masterChef, uint256 pid) external;
 }
