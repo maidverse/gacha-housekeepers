@@ -57,7 +57,7 @@ interface IGachaHousekeepers is IERC721, IERC721Metadata, IERC721Enumerable {
 
     function accSushiPerShare() external view returns (uint256);
 
-    function powerOf(uint256 id) external view returns (uint256);
+    function powerAndLP(uint256 id) external view returns (uint256, uint256);
 
     function support(uint256 id, uint256 lpTokenAmount) external;
 

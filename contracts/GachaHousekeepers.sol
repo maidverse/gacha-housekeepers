@@ -103,9 +103,9 @@ contract GachaHousekeepers is Ownable, ERC721("MaidCoin Gacha Housekeepers", "GH
         emit ChangePrice(_mintPrice, _destroyReturn);
     }
 
-    function powerOf(uint256 id) external view override returns (uint256) {
+    function powerAndLP(uint256 id) external view override returns (uint256, uint256) {
         GachaHousekeeperInfo storage housekeeper = housekeepers[id];
-        return housekeeper.originPower + (housekeeper.supportedLPTokenAmount * lpTokenToHousekeeperPower) / 1e18;
+        return (housekeeper.originPower, housekeeper.supportedLPTokenAmount);
     }
 
     function support(uint256 id, uint256 lpTokenAmount) public override {
